@@ -40,6 +40,10 @@ parser.add_argument('--first', action='store_true',
                     help=('First authentication. Will perform full OAuth2 '
                           'request. Will save result with the --save flag '
                           'at --credentials.'))
+parser.add_argument('-d', '--domain', required=True,
+                    help='The domain to retrieve groups from.')
+parser.add_argument('--nosettings', action='store_true',
+                    help='Do not retrieve Group Settings.')
 args = parser.parse_args()
 
 # Set up logging
@@ -54,7 +58,7 @@ else:
 logger.addHandler(stdout_logger)
 
 # Start backup process.
-ggbackup = GGBackup()
+ggbackup = GGBackup(args.domain)
 
 # Authenticate
 if args.first or args.save:
@@ -78,3 +82,17 @@ else:
 
 ggbackup.auth()
 
+# Retrieve all groups.
+try:
+    ggbackup.get_groups()
+    logger.info('Retrieved %s groups.', len(ggbackup.groups))
+except Exception as e:
+    logger.critical('Error gathering groups: %s', e)
+    exit(2)
+
+if args.nosettings is False:
+    try:
+        ggbackup.get_settings()
+        logger.info('Retrieved settings for all groups.')
+    except Exception as e:
+        logger.error('Error gathering group settings: %s', e)
