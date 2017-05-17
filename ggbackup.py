@@ -24,7 +24,6 @@ import sys
 from ggbackuplib import GGBackup
 
 parser = argparse.ArgumentParser(description='Back up Google Groups.')
-parser.add_argument('--setup', action='store_true', help='Setup ggbackup.')
 parser.add_argument('-v', action='store_true', help='Verbose logging.')
 parser.add_argument('--debug', action='store_true', help='Debug logging.')
 parser.add_argument('--client_secrets', nargs=1,
@@ -38,8 +37,7 @@ parser.add_argument('-s', '--save', action='store_true',
                     help='Save credentials to file. (implies --first)')
 parser.add_argument('--first', action='store_true',
                     help=('First authentication. Will perform full OAuth2 '
-                          'request. Will save result with the --save flag '
-                          'at --credentials.'))
+                          'request.'))
 parser.add_argument('-d', '--domain', required=True,
                     help='The domain to retrieve groups from.')
 parser.add_argument('--nosettings', action='store_true',
@@ -85,7 +83,6 @@ ggbackup.auth()
 # Retrieve all groups.
 try:
     ggbackup.get_groups()
-    logger.info('Retrieved %s groups.', len(ggbackup.groups))
 except Exception as e:
     logger.critical('Error gathering groups: %s', e)
     exit(2)

@@ -111,8 +111,9 @@ class GGBackup(object):
         while request is not None:
             groups = request.execute()
             for group in groups['groups']:
-                self.groups[group['email']] = group
+                self.groups[group['email'].lower()] = group
             request = self.service.groups().list_next(request, groups)
+        logger.info('Retrieved %s groups.', len(self.groups))
 
     def batch(self, items):
         """Return a list of lists that contain 1000 items or less."""
@@ -141,7 +142,7 @@ class GGBackup(object):
                 return
             logger.debug('Settings for group %s retrieved.',
                          response['email'])
-            email = self.groups[response['email']]
+            email = self.groups[response['email'].lower()]
             email.update(response)
 
         for batch in batches:
@@ -150,5 +151,6 @@ class GGBackup(object):
             for group in batch:
                 batchreq.add(self.gsetservice.groups().get(groupUniqueId=group,
                                                            alt='json'))
-                logger.debug('Executing batch.')
+                logger.debug('Added group %s to batch.', group)
+            logger.debug('Executing batch.')
             batchreq.execute()
