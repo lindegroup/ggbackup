@@ -93,3 +93,9 @@ if args.nosettings is False:
         logger.info('Retrieved settings for all groups.')
     except Exception as e:
         logger.error('Error gathering group settings: %s', e)
+
+    try:
+        ggbackup.get_members()
+        logger.info('Retrieved members for all groups.')
+    except Exception as e:
+        logger.error('Error gathering group members: %s', e)

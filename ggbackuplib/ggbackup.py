@@ -44,6 +44,7 @@ class GGBackup(object):
         self.service = None
         self.gsetservice = None
         self.groups = {}
+        self._group_batch = None
 
     def first_auth(self, client_secrets):
         """Authenticate with Google API."""
@@ -127,12 +128,17 @@ class GGBackup(object):
             i += 1
         return batches
 
+    @property
+    def group_batches(self):
+        """Return batches of groups."""
+        if self._group_batch is None:
+            groups = list(self.groups.keys())
+            self._group_batches = self.batch(groups)
+        return self._group_batches
+
     def get_settings(self):
         """Retrieve all group settings."""
         self.check_auth()
-
-        groups = list(self.groups.keys())
-        batches = self.batch(groups)
 
         def add_settings(request_id, response, exception):
             if exception is not None:
@@ -145,7 +151,7 @@ class GGBackup(object):
             email = self.groups[response['email'].lower()]
             email.update(response)
 
-        for batch in batches:
+        for batch in self.group_batches:
             batchreq = self.gsetservice.new_batch_http_request(
                 callback=add_settings)
             for group in batch:
@@ -154,3 +160,67 @@ class GGBackup(object):
                 logger.debug('Added group %s to batch.', group)
             logger.debug('Executing batch.')
             batchreq.execute()
+
+    def get_members(self):
+        """Retrieve all group memberships."""
+        self.check_auth()
+
+        self._next_batch = []
+
+        def add_members(request_id, response, exception):
+            if exception is not None:
+                logger.warning(
+                    'Exception encountered while gathering group members: %s',
+                    exception)
+                return
+            logger.debug('Group %s members retrieved: %s', request_id,
+                         len(response.get('members', [])))
+            email = self.groups[request_id]
+            if 'members' not in email:
+                email['members'] = []
+            email['members'] += response.get('members', [])
+
+            # Prepare next page request with a tuple in the format:
+            # (groupId, request)
+            if 'nextPageToken' in response:
+                self._next_batch.append(
+                    (request_id,
+                     self.service.members().list(
+                         groupKey=request_id,
+                         nextPage=response['nextPageToken'],
+                         alt='json')))
+
+        def run_next_batch():
+            """Process next pages for all batches."""
+            if len(self._next_batch) == 0:
+                logger.debug('No more pages to retrieve.')
+                return
+            logger.debug('Building next page batches.')
+            working_batch = self._next_batch
+            self._next_batch = []
+
+            batches = self.batch(working_batch)
+            for batch in batches:
+                batchreq = self.service.new_batch_http_request(
+                    callback=add_members)
+                for req in batch:
+                    batchreq.add(req[1], request_id=req[0])
+                    logger.debug('Building next page batch for group %s',
+                                 req[0])
+                logger.debug('Executing batch.')
+                batchreq.execute()
+
+            run_next_batch()
+
+        for batch in self.group_batches:
+            batchreq = self.service.new_batch_http_request(
+                callback=add_members)
+            for group in batch:
+                batchreq.add(self.service.members().list(groupKey=group,
+                                                         alt='json'),
+                             request_id=group.lower())
+                logger.debug('Added group %s to batch.', group)
+            logger.debug('Executing batch.')
+            batchreq.execute()
+
+        run_next_batch()
