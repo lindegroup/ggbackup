@@ -42,6 +42,8 @@ parser.add_argument('-d', '--domain', required=True,
                     help='The domain to retrieve groups from.')
 parser.add_argument('--nosettings', action='store_true',
                     help='Do not retrieve Group Settings.')
+parser.add_argument('--setup', action='store_true',
+                    help='Only set up the application, do not request data.')
 args = parser.parse_args()
 
 # Set up logging
@@ -78,6 +80,10 @@ else:
     except Exception as e:
         logger.error('Error loading credentials: %s', e)
 
+if args.setup:
+    logger.info('Setup complete.')
+    exit(0)
+
 ggbackup.auth()
 
 # Retrieve all groups.
@@ -94,8 +100,9 @@ if args.nosettings is False:
     except Exception as e:
         logger.error('Error gathering group settings: %s', e)
 
-    try:
-        ggbackup.get_members()
-        logger.info('Retrieved members for all groups.')
-    except Exception as e:
-        logger.error('Error gathering group members: %s', e)
+try:
+    ggbackup.get_members()
+    logger.info('Retrieved members for all groups.')
+except Exception as e:
+    logger.error('Error gathering group members: %s', e)
+
