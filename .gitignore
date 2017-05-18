@@ -87,3 +87,7 @@ ENV/
 
 # Rope project settings
 .ropeproject
+
+# Google Apps Configs
+client_secrets.json
+credentials.json
