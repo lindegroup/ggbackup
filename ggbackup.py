@@ -19,9 +19,10 @@ from __future__ import (absolute_import, division, print_function,
 
 import argparse
 import logging
+import os
 import sys
 
-from ggbackuplib import GGBackup
+from ggbackuplib import GGBackup, GGWriter
 
 parser = argparse.ArgumentParser(description='Back up Google Groups.')
 parser.add_argument('-v', action='store_true', help='Verbose logging.')
@@ -44,6 +45,10 @@ parser.add_argument('--nosettings', action='store_true',
                     help='Do not retrieve Group Settings.')
 parser.add_argument('--setup', action='store_true',
                     help='Only set up the application, do not request data.')
+parser.add_argument('--target', nargs=1, default=['.'],
+                    help='The target directory to save CSVs (default: .)')
+parser.add_argument('--datestamp', action='store_true',
+                    help='Datestamp all CSVs.')
 args = parser.parse_args()
 
 # Set up logging
@@ -56,6 +61,9 @@ elif args.v:
 else:
     logger.setLevel(logging.WARNING)
 logger.addHandler(stdout_logger)
+
+# Set up error count.
+errors = 0
 
 # Start backup process.
 ggbackup = GGBackup(args.domain)
@@ -73,16 +81,18 @@ if args.first or args.save:
             ggbackup.save(args.credentials[0])
         except Exception as e:
             logger.error('Error saving credentials: %s', e)
+            errors += 1
 else:
     # Load saved credentials.
     try:
         ggbackup.load(args.credentials[0])
     except Exception as e:
         logger.error('Error loading credentials: %s', e)
+        errors += 1
 
 if args.setup:
     logger.info('Setup complete.')
-    exit(0)
+    exit(errors)
 
 ggbackup.auth()
 
@@ -91,7 +101,7 @@ try:
     ggbackup.get_groups()
 except Exception as e:
     logger.critical('Error gathering groups: %s', e)
-    exit(2)
+    exit(1)
 
 if args.nosettings is False:
     try:
@@ -99,10 +109,33 @@ if args.nosettings is False:
         logger.info('Retrieved settings for all groups.')
     except Exception as e:
         logger.error('Error gathering group settings: %s', e)
+        errors += 1
 
 try:
     ggbackup.get_members()
     logger.info('Retrieved members for all groups.')
 except Exception as e:
     logger.error('Error gathering group members: %s', e)
+    errors += 1
 
+# Write the data
+
+ggwriter = GGWriter(os.path.join(args.target[0], args.domain),
+                    ggbackup.groups,
+                    datestamp=args.datestamp)
+
+try:
+    ggwriter.write_members()
+    logger.info('Wrote all group membership CSVs.')
+except Exception as e:
+    logger.error('Error writing group membership: %s', e)
+    errors += 1
+
+try:
+    ggwriter.write_settings()
+    logger.info('Wrote all settings.')
+except Exception as e:
+    logger.error('Error writing group settings: %s', e)
+    errors += 1
+
+exit(errors)
