@@ -111,3 +111,5 @@ The following arguments are available:
 
 * `--nosettings` - Do not retrieve Group Settings (the legacy Google Apps Free edition does not support the Group Settings API).
 * `--datestamp` - Add an ISO date stamp to the to the end of each CSV created.
+
+*Copyright (c) 2017 [The Linde Group, Inc.](https://lindegroup.com)*
