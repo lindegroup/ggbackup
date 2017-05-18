@@ -25,30 +25,41 @@ import sys
 from ggbackuplib import GGBackup, GGWriter
 
 parser = argparse.ArgumentParser(description='Back up Google Groups.')
-parser.add_argument('-v', action='store_true', help='Verbose logging.')
-parser.add_argument('--debug', action='store_true', help='Debug logging.')
-parser.add_argument('--client_secrets', nargs=1,
-                    default=['client_secrets.json'],
-                    help='The client_secrets.json file to use.')
-parser.add_argument('--credentials', nargs=1,
-                    default=['credentials.json'],
-                    help=('The credentials file to load/save '
-                          '(default: credentials.json).'))
-parser.add_argument('-s', '--save', action='store_true',
-                    help='Save credentials to file. (implies --first)')
-parser.add_argument('--first', action='store_true',
-                    help=('First authentication. Will perform full OAuth2 '
-                          'request.'))
-parser.add_argument('-d', '--domain', required=True,
-                    help='The domain to retrieve groups from.')
-parser.add_argument('--nosettings', action='store_true',
-                    help='Do not retrieve Group Settings.')
-parser.add_argument('--setup', action='store_true',
-                    help='Only set up the application, do not request data.')
-parser.add_argument('--target', nargs=1, default=['.'],
-                    help='The target directory to save CSVs (default: .)')
-parser.add_argument('--datestamp', action='store_true',
-                    help='Datestamp all CSVs.')
+parser.add_argument('domain',
+                    help='The G Suite domain to retrieve groups from.')
+
+group = parser.add_argument_group(title='Logging options')
+group.add_argument('-v', action='store_true', help='Verbose logging.')
+group.add_argument('--debug', action='store_true', help='Debug logging.')
+
+group = parser.add_argument_group(title='File location options')
+
+group.add_argument('--client_secrets', nargs=1,
+                   default=['client_secrets.json'],
+                   help='The client_secrets.json file to use.')
+group.add_argument('--credentials', nargs=1,
+                   default=['credentials.json'],
+                   help=('The credentials file to load/save '
+                         '(default: credentials.json).'))
+group.add_argument('--target', nargs=1, default=['.'],
+                   help='The target directory to save CSVs (default: .)')
+
+group = parser.add_argument_group(title='Authentication options')
+group.add_argument('--first', action='store_true',
+                   help=('First authentication. Will perform full OAuth2 '
+                         'request.'))
+group.add_argument('-s', '--save', action='store_true',
+                   help='Save credentials to file. (implies --first)')
+group.add_argument('--setup', action='store_true',
+                   help=('Only set up the application, do not request data. '
+                         'Implies --first and --save.'))
+
+group = parser.add_argument_group(title='Run options')
+group.add_argument('--nosettings', action='store_true',
+                   help='Do not retrieve Group Settings.')
+group.add_argument('--datestamp', action='store_true',
+                   help='Datestamp all CSVs.')
+
 args = parser.parse_args()
 
 # Set up logging
@@ -69,14 +80,14 @@ errors = 0
 ggbackup = GGBackup(args.domain)
 
 # Authenticate
-if args.first or args.save:
+if args.first or args.save or args.setup:
     try:
         ggbackup.first_auth(args.client_secrets[0])
     except Exception as e:
         logger.critical('Error authenticating with Google: %s', e)
         exit(1)
 
-    if args.save:
+    if args.save or args.setup:
         try:
             ggbackup.save(args.credentials[0])
         except Exception as e:
