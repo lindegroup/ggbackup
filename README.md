@@ -32,7 +32,7 @@ Prerequisites:
 
 It's generally best practice to set up a virtualenv for each Python application to avoid dependency conflicts, but this is not required.
 
-Once you download the application, change to its working directory and run the following command: `pip -r requirements.txt`.  This will install all dependencies.
+Once you download the application, change to its working directory and run the following command: `pip install -r requirements.txt`.  This will install all dependencies.
 
 ## Configuration
 Once installed, the application needs to be configured both in G Suite and locally.
